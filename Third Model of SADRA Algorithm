@@ -1,0 +1,104 @@
+#Third Model of SADRA Algorithm 
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import cumtrapz
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.svm import SVR
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.pipeline import make_pipeline
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+
+data = {
+    'Cement': [380, 420, 360, 390, 350, 410, 375, 430, 340, 400, 370, 395, 355, 415, 385, 425, 365, 405, 345, 435],
+    'Water': [180, 190, 170, 185, 165, 195, 178, 200, 160, 188, 172, 182, 168, 192, 176, 198, 174, 187, 162, 205],
+    'Fine_Aggregate': [750, 800, 700, 760, 680, 780, 730, 820, 650, 770, 710, 745, 690, 790, 735, 810, 705, 765, 660, 830],
+    'Coarse_Aggregate': [1150, 1200, 1050, 1170, 1000, 1220, 1120, 1250, 980, 1180, 1080, 1165, 1030, 1230, 1130, 1240, 1070, 1190, 990, 1260],
+    'Fiber_Type': [1.5, 0, 2, 1.2, 0, 1.8, 0.5, 0, 1, 1.6, 0, 0.8, 1.4, 0, 1.1, 2.2, 0, 1.7, 0, 0],
+    'Micro_Silica': [25, 30, 15, 28, 10, 35, 22, 40, 12, 27, 18, 24, 14, 38, 23, 42, 17, 29, 11, 45],
+    'Super_Plasticizer': [5, 6, 3.5, 5.2, 2.8, 6.5, 4, 7, 2.5, 5.5, 3.2, 4.8, 3, 6.8, 4.3, 7.2, 3.1, 5.7, 2.6, 7.5],
+    'Compressive_Strength': [48.3, 52.1, 38.9, 47.5, 34.5, 55, 42.3, 58.2, 31.8, 50.4, 36.7, 46.1, 33.2, 56.7, 43.8, 60.1, 35.4, 51.9, 32.5, 62.3]
+}
+
+df = pd.DataFrame(data)
+
+#Modify Data with cumulative_data
+cumulative_data = df.copy()
+columns_to_integrate = ['Cement', 'Water', 'Fine_Aggregate', 'Coarse_Aggregate', 'Fiber_Type', 'Micro_Silica', 'Super_Plasticizer', 'Compressive_Strength']
+
+for col in columns_to_integrate:
+    cumulative_data[col] = cumtrapz(df[col], initial=0)
+
+#Cumulative Values Dataset Figure
+plt.figure(figsize=(10, 6))
+for col in columns_to_integrate:
+    plt.plot(cumulative_data[col], label=col)
+plt.xlabel("Sample Index")
+plt.ylabel("Cumulative Values")
+plt.title("Cumulative Integrated Values (CIV) - SADRA Algorithm (Third Method)")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+
+#Compressive Strength Figure
+plt.figure(figsize=(10, 6))
+plt.plot(df['Compressive_Strength'], label="Original Compressive Strength", marker='o', color='blue')
+plt.plot(cumulative_data['Compressive_Strength'], label="Cumulative Compressive Strength", marker='x', color='orange')
+plt.xlabel("Sample Index")
+plt.ylabel("Compressive Strength")
+plt.title("Compressive Strength Comparison (Original vs Cumulative)")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+#Define X and y
+X = cumulative_data.drop(columns=['Compressive_Strength'])
+y = cumulative_data['Compressive_Strength']
+
+#Splitting Train and Test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+#Regressions
+regressors = {
+    'Linear Regression': LinearRegression(),
+    'Ridge Regression': Ridge(),
+    'SVR': SVR(kernel='rbf'),
+    'Polynomial Regression': make_pipeline(PolynomialFeatures(degree=2), LinearRegression()),
+    'Random Forest': RandomForestRegressor(random_state=42)
+}
+
+results = {}
+for name, model in regressors.items():
+#Train Model
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    
+#R2, MAE and RSME
+    r2 = r2_score(y_test, y_pred)
+    mae = mean_absolute_error(y_test, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+    results[name] = {'R2': r2, 'MAE': mae, 'RMSE': rmse}
+    
+#Prediction Model Figures
+    plt.figure(figsize=(10, 6))
+    plt.scatter(y_test, y_pred, label=f'{name} Regression', color='blue', alpha=0.7)
+    plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'k--', lw=2)
+    plt.xlabel("Actual Values")
+    plt.ylabel("Predicted Values")
+    plt.title(f'{name} Regression Results - SADRA Algorithm (Third Method)')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+#Accuracy Models Results
+print("نتایج ارزیابی مدل‌ها:")
+for name, metrics in results.items():
+    print(f"{name}: R2 = {metrics['R2']:.2f}, MAE = {metrics['MAE']:.2f}, RMSE = {metrics['RMSE']:.2f}")
